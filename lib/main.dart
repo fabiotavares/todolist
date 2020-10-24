@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:todo_list/app/database/connection.dart';
+import 'package:todo_list/app/modules/home/home_controller.dart';
+import 'package:todo_list/app/modules/home/home_page.dart';
+import 'package:todo_list/app/modules/new_task/new_task_controller.dart';
+import 'package:todo_list/app/modules/new_task/new_task_page.dart';
+import 'package:todo_list/app/repositories/todos_repository.dart';
 
 void main() {
   runApp(App());
@@ -50,19 +56,38 @@ class _AppState extends State<App> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Todo List',
-      theme: ThemeData(
-        primaryColor: Color(0xFFFF9129),
-        buttonColor: Color(0xFFFF9129),
-        textTheme: GoogleFonts.robotoTextTheme(),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Todo List'),
+    return MultiProvider(
+      providers: [
+        Provider(
+          create: (_) => TodosRepository(),
         ),
-        body: Container(),
+      ],
+      child: MaterialApp(
+        title: 'Todo List',
+        theme: ThemeData(
+          primaryColor: Color(0xFFFF9129),
+          buttonColor: Color(0xFFFF9129),
+          textTheme: GoogleFonts.robotoTextTheme(),
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: ChangeNotifierProvider(
+          create: (context) {
+            // ! antes da versão 4.1  do Provider
+            // var repository = Provider.of<TodosRepositorie>(context);
+            // ! a partir da versão 4.1
+            var repository = context.read<TodosRepository>();
+            return HomeController(repository: repository);
+          },
+          child: HomePage(),
+        ),
+        routes: {
+          '/new': (_) => ChangeNotifierProvider(
+                create: (context) => NewTaskController(
+                  repository: context.read<TodosRepository>(),
+                ),
+                child: NewTaskPage(),
+              ),
+        },
       ),
     );
   }

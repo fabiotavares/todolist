@@ -34,6 +34,7 @@ class Connection {
         if (_db == null) {
           var databasePath = await getDatabasesPath();
           var pathDatabase = join(databasePath, DATABASE_NAME);
+          print(databasePath);
           _db = await openDatabase(
             pathDatabase,
             version: VERSION,
