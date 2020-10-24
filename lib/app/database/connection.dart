@@ -60,7 +60,7 @@ class Connection {
   FutureOr<void> _onCreate(Database db, int version) {
     var batch = db.batch();
     createV1(batch);
-    createV2(batch);
+    //createV2(batch);
     batch.commit();
   }
 

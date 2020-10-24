@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:todo_list/app/modules/new_task/new_task_controller.dart';
 
 class NewTaskPage extends StatelessWidget {
+  static String routerName = '/new';
+
   const NewTaskPage({Key key}) : super(key: key);
 
   @override
