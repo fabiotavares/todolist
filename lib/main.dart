@@ -82,9 +82,11 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         ),
         routes: {
           NewTaskPage.routerName: (_) => ChangeNotifierProvider(
-                create: (context) => NewTaskController(
-                  repository: context.read<TodosRepository>(),
-                ),
+                create: (context) {
+                  var day = ModalRoute.of(_).settings.arguments;
+                  return NewTaskController(
+                      repository: context.read<TodosRepository>(), day: day);
+                },
                 child: NewTaskPage(),
               ),
         },

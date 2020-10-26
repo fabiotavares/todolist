@@ -1,5 +1,6 @@
 import 'package:ff_navigation_bar/ff_navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_list/app/modules/home/home_controller.dart';
 import 'package:todo_list/app/modules/new_task/new_task_page.dart';
@@ -45,14 +46,39 @@ class HomePage extends StatelessWidget {
                 label: 'Selecionar Data',
               ),
             ],
-            onSelectTab: (index) => controller.changeSelectedTab(index),
+            onSelectTab: (index) {
+              controller.changeSelectedTab(context, index);
+            },
           ),
           body: Container(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height,
             child: ListView.builder(
-              itemCount: 3,
+              itemCount: controller.listTodos?.keys?.length ?? 0,
               itemBuilder: (_, int index) {
+                // obtendo a data e sua respectiva lista de todos
+                var dateFormat = DateFormat('dd/MM/yyyy');
+                // Iterable precisa usar elementAt
+                var listTodos = controller.listTodos;
+                var dayKey = listTodos.keys.elementAt(index);
+                var todos = listTodos[dayKey];
+
+                // se está na tab dos finalizados e não tem tarefas...
+                if (todos.isEmpty && controller.selectedTab == 0) {
+                  // ...retorne um SizedBox menor possível
+                  return SizedBox.shrink();
+                }
+
+                // descobrindo se uso Hoje, Amanhã ou a data propriamente
+                var day = dayKey;
+                var hoje = DateTime.now();
+                var amanha = hoje.add(Duration(days: 1));
+                if (dayKey == dateFormat.format(hoje)) {
+                  day = 'HOJE';
+                } else if (dayKey == dateFormat.format(amanha)) {
+                  day = 'AMANHÃ';
+                }
+
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -63,7 +89,7 @@ class HomePage extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              'Hoje',
+                              day,
                               style: TextStyle(
                                 fontSize: 30,
                                 fontWeight: FontWeight.bold,
@@ -76,8 +102,14 @@ class HomePage extends StatelessWidget {
                               size: 30,
                               color: Theme.of(context).primaryColor,
                             ),
-                            onPressed: () => Navigator.of(context)
-                                .pushNamed(NewTaskPage.routerName),
+                            onPressed: () async {
+                              await Navigator.of(context).pushNamed(
+                                NewTaskPage.routerName,
+                                arguments: dayKey,
+                              );
+                              // atualizar tasks
+                              controller.update();
+                            },
                           ),
                         ],
                       ),
@@ -87,27 +119,41 @@ class HomePage extends StatelessWidget {
                       shrinkWrap: true,
                       // impede a rolagem para não impedir na lista de cima
                       physics: NeverScrollableScrollPhysics(),
-                      itemCount: 4,
+                      itemCount: todos.length,
                       itemBuilder: (_, int index) {
-                        return ListTile(
-                          leading: Checkbox(
-                            value: false,
-                            onChanged: (value) {},
-                          ),
-                          title: Text(
-                            'Tarefa X',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              decoration: TextDecoration.lineThrough,
+                        var todo = todos[index];
+                        return Dismissible(
+                          key: ValueKey(todo.id),
+                          direction: DismissDirection.endToStart,
+                          background: backgroundDelete(context),
+                          confirmDismiss: (_) => confirmDeleteDialog(context),
+                          onDismissed: (_) => controller.deleteTodo(todo),
+                          child: ListTile(
+                            leading: Checkbox(
+                              activeColor: Theme.of(context).primaryColor,
+                              value: todo.finalizado,
+                              onChanged: (value) =>
+                                  controller.checkOrUncheck(todo),
                             ),
-                          ),
-                          trailing: Text(
-                            '06:00',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              decoration: TextDecoration.lineThrough,
+                            title: Text(
+                              todo.descricao,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                decoration: todo.finalizado
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                            trailing: Text(
+                              '${todo.dataHora.hour.toString().padLeft(2, '0')}:${todo.dataHora.minute.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                decoration: todo.finalizado
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
                             ),
                           ),
                         );
@@ -120,6 +166,59 @@ class HomePage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Container backgroundDelete(BuildContext context) {
+    return Container(
+      color: Colors.red,
+      child: Align(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Icon(
+              Icons.delete,
+              color: Colors.white,
+            ),
+            Text(
+              " Excluir",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.right,
+            ),
+            SizedBox(
+              width: 20,
+            ),
+          ],
+        ),
+        alignment: Alignment.centerRight,
+      ),
+    );
+  }
+
+  Future<bool> confirmDeleteDialog(BuildContext context) async {
+    return await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Tem certeza?'),
+        content: Text('Deseja excluir essa tarefa?'),
+        actions: [
+          FlatButton(
+            child: Text('Não'),
+            onPressed: () {
+              Navigator.of(ctx).pop(false);
+            },
+          ),
+          FlatButton(
+            child: Text('Sim'),
+            onPressed: () {
+              Navigator.of(ctx).pop(true);
+            },
+          ),
+        ],
+      ),
     );
   }
 }
